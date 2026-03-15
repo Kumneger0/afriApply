@@ -1,0 +1,22 @@
+{
+  "name": "afriapply",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.58",
+    "@ai-sdk/google": "^3.0.43",
+    "@ai-sdk/groq": "^3.0.29",
+    "@ai-sdk/openai": "^3.0.41",
+    "ai": "^6.0.116",
+    "hono": "^4.12.8",
+    "puppeteer": "^24.39.1",
+    "zod": "^3.23.8"
+  }
+}
