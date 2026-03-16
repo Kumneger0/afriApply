@@ -110,14 +110,6 @@ export async function scrapeJobListings(page: Page): Promise<JobListing[]> {
   return await parseJobListings(page);
 }
 
-export function saveJobsToJson(
-  jobs: JobListing[],
-  filename: string = "jobs.json",
-): void {
-  const fs = require("fs");
-  fs.writeFileSync(filename, JSON.stringify(jobs, null, 2));
-  console.log(`Saved ${jobs.length} jobs to ${filename}`);
-}
 export interface ScrapingResult {
   jobs: JobListing[];
   latestJobId: string | null;

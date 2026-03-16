@@ -69,17 +69,21 @@ export async function submitJobApplication(
   options: FormFillingOptions = {},
 ): Promise<void> {
   try {
-    const submitButton =
-      (await page.$('button[type="submit"]:has-text("Submit")')) ||
-      (await page.$('button:has-text("Submit")'));
+    // Find submit button using XPath or by evaluating text content
+    const submitButton = await page.evaluateHandle(() => {
+      const buttons = Array.from(document.querySelectorAll('button[type="submit"]'));
+      return buttons.find(btn => btn.textContent?.toLowerCase().includes('submit')) || 
+             buttons.find(btn => btn.textContent?.toLowerCase().includes('apply')) ||
+             buttons[0];
+    });
 
-    if (submitButton) {
-        //just mocking we don't need to apply if we reach this stage which means we are applied 
-        console.log('applied')
-        console.log('applied')
-        console.log('applied')
-        console.log('applied')
-    //   await submitButton.click();
+    if (submitButton && submitButton.asElement()) {
+      //just mocking we don't need to apply if we reach this stage which means we are applied 
+      console.log('applied', submitButton)
+      console.log('applied', submitButton)
+      console.log('applied', submitButton)
+      console.log('applied', submitButton)
+      // await submitButton.asElement()?.click();
     } else {
       throw new Error("Submit button not found");
     }

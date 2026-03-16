@@ -3,6 +3,7 @@
         "afriapply",
         "Afriwork",
         "groq",
-        "networkidle"
+        "networkidle",
+        "Prefs"
     ]
 }

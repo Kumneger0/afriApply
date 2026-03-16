@@ -1,11 +1,31 @@
-import { loginToAfriwork, cleanup, type AuthenticatedSession } from "./src/auth/login.js";
+import {
+  loginToAfriwork,
+  cleanup,
+  type AuthenticatedSession,
+} from "./src/auth/login.js";
 import {
   scrapeAllJobs,
-  saveJobsToJson,
+  type JobListing,
 } from "./src/lib/jobParser.js";
-import { generateCoverLetters, type AIProvider, type CoverLetterMatch, type UserProfile } from "./src/ai/aiHelper.js";
-import { fillJobApplicationForm, submitJobApplication, type ApplicationFormData } from "./src/browser/formFiller.js";
-import { getProfile } from "./src/lib/utils";
+import {
+  generateCoverLetters,
+  type AIProvider,
+  type CoverLetterMatch,
+  type UserProfile,
+} from "./src/ai/aiHelper.js";
+import {
+  fillJobApplicationForm,
+  submitJobApplication,
+  type ApplicationFormData,
+} from "./src/browser/formFiller.js";
+
+// --- Hono UI Imports and Setup ---
+import { Hono } from "hono";
+import app from "./src/app/index"; // Import your Hono app from src/app/index.tsx
+import { db } from "./src/db/index.js";
+import { appliedJobs, users, scrapingState } from "./src/db/schema.js";
+import { desc, eq } from "drizzle-orm";
+// --- End Hono UI Imports and Setup ---
 
 interface ScrapingConfig {
   email: string;
@@ -13,13 +33,13 @@ interface ScrapingConfig {
   baseUrl: string;
   headless?: boolean;
   outputFile?: string;
-  provider:AIProvider
+  provider: AIProvider;
 }
 
 function getConfigFromEnv(): ScrapingConfig {
   const email = process.env.AFRIWORK_EMAIL;
   const password = process.env.AFRIWORK_PASSWORD;
-  const provider = process.env.AI_PROVIDER as AIProvider | undefined
+  const provider = process.env.AI_PROVIDER as AIProvider | undefined;
 
   if (!email || !password || !provider) {
     throw new Error(
@@ -32,7 +52,7 @@ function getConfigFromEnv(): ScrapingConfig {
     password,
     baseUrl: process.env.AFRIWORK_BASE_URL || "https://afriworket.com",
     headless: process.env.HEADLESS !== "false",
-    provider
+    provider,
   };
 }
 
@@ -48,68 +68,71 @@ interface ApplicationResult {
 }
 
 async function applyToSuitableJobs(
-  session: AuthenticatedSession, 
-  suitableJobs: CoverLetterMatch[], 
-  profileData: UserProfile, 
+  session: AuthenticatedSession,
+  suitableJobs: CoverLetterMatch[],
+  profileData: UserProfile,
   baseUrl: string,
-  allJobs: any[]
+  allJobs: JobListing[],
 ): Promise<ApplicationResult[]> {
   const results: ApplicationResult[] = [];
-  
+
   for (const job of suitableJobs) {
-    const originalJob = allJobs.find(j => j.id === job.jobId);
-    
+    const originalJob = allJobs.find((j) => j.id === job.jobId);
+
     const result: ApplicationResult = {
       jobId: job.jobId,
       jobTitle: job.jobTitle,
       company: job.company,
-      jobDescription: originalJob?.description || '',
+      jobDescription: originalJob?.description || "",
       coverLetterUsed: job.coverLetter,
       success: false,
-      appliedAt: new Date().toISOString()
+      appliedAt: new Date().toISOString(),
     };
-    
+
     try {
       const jobUrl = `${baseUrl}/jobs/${job.jobId}`;
-      await session.page.goto(jobUrl, { 
-        waitUntil: 'networkidle2', 
-        timeout: 30000 
+      await session.page.goto(jobUrl, {
+        waitUntil: "networkidle2",
+        timeout: 30000,
       });
-      
-      await session.page.waitForSelector('textarea[name="coverLetter"]', { 
-        timeout: 10000 
+
+      await session.page.waitForSelector('textarea[name="coverLetter"]', {
+        timeout: 10000,
       });
-      
+
       const formData: ApplicationFormData = {
         coverLetter: job.coverLetter,
         telegramUsername: profileData.personalInfo.telegramUsername,
         portfolioLinks: profileData.personalInfo.portfolioLinks || [],
       };
-      
+
       await fillJobApplicationForm(session.page, formData, { timeout: 10000 });
-      
-      await submitJobApplication(session.page, { 
-        waitForNavigation: false, 
-        timeout: 10000 
+
+      await submitJobApplication(session.page, {
+        waitForNavigation: false,
+        timeout: 10000,
       });
-      
+
       result.success = true;
-      console.log(`Successfully applied to ${job.jobTitle}`);
       
-      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
-      
+      await new Promise((resolve) =>
+        setTimeout(resolve, 2000 + Math.random() * 3000),
+      );
     } catch (error) {
       result.error = error instanceof Error ? error.message : String(error);
       console.error(`Failed to apply to ${job.jobTitle}:`, error);
     }
-    
+
     results.push(result);
   }
-  
-  const fs = await import('fs');
-  fs.writeFileSync('application-results.json', JSON.stringify(results, null, 2));
+
+  const fs = await import("fs");
+  fs.writeFileSync(
+    "application-results.json",
+    JSON.stringify(results, null, 2),
+  );
   console.log(`Application results saved to application-results.json`);
-  
+
   return results;
 }
 
@@ -118,7 +141,18 @@ async function searchForJobs() {
 
   try {
     const config = getConfigFromEnv();
-    const lastKnownJobId = '' // imagine this is coming from db
+
+    const user = await db.select().from(users).limit(1).get();
+    const scrapingStateRecord = user 
+      ? await db
+          .select()
+          .from(scrapingState)
+          .where(eq(scrapingState.userId, user.id))
+          .limit(1)
+          .get()
+      : null;
+    
+    const lastKnownJobId = scrapingStateRecord?.latestJobId ?? "";
 
     session = await loginToAfriwork(
       {
@@ -128,7 +162,7 @@ async function searchForJobs() {
       {
         baseUrl: config.baseUrl,
         headless: config.headless,
-        timeout:100000
+        timeout: 100000,
       },
     );
 
@@ -144,38 +178,174 @@ async function searchForJobs() {
     );
 
     if (result.jobs.length > 0) {
-      saveJobsToJson(result.jobs, config.outputFile!);
-
-      if (result.latestJobId) {
-        //save the latest job to database
+      // Fetch user profile from database
+      const user = await db.select().from(users).limit(1).get();
+      if (!user) {
+        throw new Error('No user profile found. Please set up your profile first at /setup');
       }
 
-      const profileData = getProfile()
-      const { suitableJobs, rejectedJobs } = await generateCoverLetters(
-        profileData,
-        result.jobs, 
-        config.provider
-      );
-      
-      
-      if (rejectedJobs.length > 0) {
-        rejectedJobs.forEach(job => {
-          console.log(`- ${job.jobTitle} at ${job.company}: ${job.rejectionReason}`);
+      const userProfile = await db.query.users.findFirst({
+        where: (users, { eq }) => eq(users.id, user.id),
+        with: {
+          skills: true,
+          experiences: true,
+          educations: true,
+          languages: true,
+          achievements: true,
+          projects: true,
+        },
+      });
+
+      if (!userProfile) {
+        throw new Error('Failed to load user profile');
+      }
+
+      const profileData: UserProfile = {
+        personalInfo: {
+          fullName: userProfile.fullName,
+          email: userProfile.email,
+          phone: userProfile.phone ?? undefined,
+          location: userProfile.location ?? undefined,
+          telegramUsername: userProfile.telegramUsername ?? undefined,
+        },
+        professionalSummary: userProfile.professionalSummary || '',
+        skills: userProfile.skills.map(s => s.name),
+        experience: userProfile.experiences.map(e => ({
+          position: e.position,
+          company: e.company,
+          duration: e.duration,
+          description: e.description,
+        })),
+        education: userProfile.educations[0] ? {
+          degree: userProfile.educations[0].degree,
+          institution: userProfile.educations[0].institution,
+          year: userProfile.educations[0].year,
+        } : {
+          degree: '',
+          institution: '',
+          year: new Date().getFullYear(),
+        },
+        languages: userProfile.languages.map(l => `${l.name} (${l.proficiency})`),
+        achievements: userProfile.achievements.map(a => a.description),
+        projects: userProfile.projects.map(p => ({
+          name: p.name,
+          description: p.description,
+          link: p.link ?? undefined,
+        })),
+      };
+
+      let allSuitableJobs: Awaited<
+        ReturnType<typeof generateCoverLetters>
+      >["suitableJobs"] = [];
+      let allRejectedJobs: Awaited<
+        ReturnType<typeof generateCoverLetters>
+      >["rejectedJobs"] = [];
+
+      if (result.jobs.length) {
+        const chunkSize = 3;
+        const jobChunks: JobListing[][] = [];
+
+        for (let i = 0; i < result.jobs.length; i += chunkSize) {
+          jobChunks.push(result.jobs.slice(i, i + chunkSize));
+        }
+
+        for (const chunk of jobChunks) {
+          const { suitableJobs, rejectedJobs } = await generateCoverLetters(
+            profileData,
+            chunk,
+            config.provider,
+          );
+
+          allSuitableJobs.push(...suitableJobs);
+          allRejectedJobs.push(...rejectedJobs);
+        }
+      }
+
+      if (allRejectedJobs.length > 0) {
+        allRejectedJobs.forEach((job) => {
+          console.log(
+            `- ${job.jobTitle} at ${job.company}: ${job.rejectionReason}`,
+          );
         });
       }
-      
-      if (suitableJobs.length > 0) {
-        const applicationResults = await applyToSuitableJobs(session, suitableJobs, profileData, config.baseUrl, result.jobs);
-        return { applicationResults, suitableJobs, rejectedJobs };
+
+      if (allSuitableJobs.length > 0) {
+        const applicationResults = await applyToSuitableJobs(
+          session,
+          allSuitableJobs,
+          profileData,
+          config.baseUrl,
+          result.jobs,
+        );
+
+        const user = await db.select().from(users).limit(1).get();
+        if (user) {
+          const successfulApplications = applicationResults.filter(
+            (app) => app.success,
+          );
+
+          if (successfulApplications.length > 0) {
+            await db
+              .insert(appliedJobs)
+              .values(
+                successfulApplications.map((app) => ({
+                  userId: user.id,
+                  jobId: app.jobId,
+                  title: app.jobTitle,
+                  description: `${app.jobTitle} at ${app.company}`,
+                })),
+              )
+              .run();
+
+            console.log(
+              `Saved ${successfulApplications.length} successful applications to database`,
+            );
+          }
+          
+          // Update the latest scraped job ID after successful applications
+          if (result.latestJobId) {
+            const existing = await db
+              .select()
+              .from(scrapingState)
+              .where(eq(scrapingState.userId, user.id))
+              .limit(1)
+              .get();
+
+            if (existing) {
+              await db
+                .update(scrapingState)
+                .set({ 
+                  latestJobId: result.latestJobId,
+                  updatedAt: new Date().toISOString()
+                })
+                .where(eq(scrapingState.userId, user.id))
+                .run();
+            } else {
+              await db
+                .insert(scrapingState)
+                .values({
+                  userId: user.id,
+                  latestJobId: result.latestJobId,
+                })
+                .run();
+            }
+            console.log(`Updated latest scraped job ID: ${result.latestJobId}`);
+          }
+        }
+
+        return {
+          applicationResults,
+          suitableJobs: allSuitableJobs,
+          rejectedJobs: allRejectedJobs,
+        };
       } else {
-        console.log('no suitable jobs found for application');
+        console.log("no suitable jobs found for application");
       }
 
       if (result.hasMorePages) {
       }
     } else {
     }
-
   } catch (error) {
     console.error("Error during job scraping:", error);
     throw error;
@@ -187,11 +357,21 @@ async function searchForJobs() {
   }
 }
 
-  searchForJobs()
-    .then((results) => {
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
+
+app.get('/apply', async (c) => {
+  const response = await searchForJobs()
+  c.json(response)
+})
+
+const mainApp = new Hono();
+mainApp.route("/", app);
+
+const port = parseInt(process.env.PORT || "3000");
+console.log(`Server is running on port ${port}`);
+console.log(`Access the setup page at http://localhost:${port}/setup`);
+
+Bun.serve({
+  fetch: app.fetch,
+  port,
+  idleTimeout:60
+});

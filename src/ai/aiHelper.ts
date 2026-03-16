@@ -5,9 +5,6 @@ import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { z } from "zod";
 import type { JobListing } from "../lib/jobParser";
-import userProfile from '../../profile.json'
-
-export type UserProfile = typeof userProfile
 
 const CoverLetterSchema = z.object({
   suitableJobs: z.array(
@@ -38,6 +35,37 @@ type CoverLetterSchemaType = z.infer<typeof CoverLetterSchema>
 export type CoverLetterMatch = CoverLetterSchemaType['suitableJobs'][number]
 
 export type AIProvider = "openai" | "anthropic" | "google" | "groq";
+
+export type UserProfile = {
+  personalInfo: {
+    fullName: string;
+    email: string;
+    phone?: string;
+    location?: string;
+    telegramUsername?: string;
+    portfolioLinks?: string[];
+  };
+  professionalSummary: string;
+  skills: string[];
+  experience: Array<{
+    position: string;
+    company: string;
+    duration: string;
+    description: string;
+  }>;
+  education: {
+    degree: string;
+    institution: string;
+    year: number;
+  };
+  languages: string[];
+  achievements: string[];
+  projects?: Array<{
+    name: string;
+    description: string;
+    link?: string;
+  }>;
+};
 
 function getModel(provider: AIProvider) {
   switch (provider) {
