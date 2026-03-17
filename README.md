@@ -125,22 +125,6 @@ curl http://localhost:3000/apply
 **Automated scheduling:**
 Set up a cron job or use a task scheduler to periodically trigger the job search.
 
-## 📊 Database Schema
-
-The application uses SQLite with the following main tables:
-
-- **users**: User profile information
-- **skills**: User skills
-- **experiences**: Work experience
-- **educations**: Educational background
-- **languages**: Language proficiencies
-- **achievements**: Professional achievements
-- **projects**: Portfolio projects
-- **job_filter_preferences**: Job search filters
-- **applied_jobs**: Track submitted applications
-- **scraping_state**: Track scraping progress
-
-
 ## 🤖 AI Integration
 
 AfriApply supports multiple AI providers for cover letter generation:
