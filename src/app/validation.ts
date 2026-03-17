@@ -24,11 +24,11 @@ export const userSchema = z.object({
 
 export const jobFilterPreferencesSchema = z.object({
   sector: z.enum(SectorEnum).optional().or(z.literal("")),
-  jobTypes: stringOrArray.pipe(z.array(z.enum(JobTypeEnum))).optional().default([]),
-  jobSites: stringOrArray.pipe(z.array(z.enum(JobSiteEnum))).optional().default([]),
-  experienceLevel: z.enum(ExperienceLevelEnum).optional().or(z.literal("")),
-  educationLevel: z.enum(EducationLevelEnum).optional().or(z.literal("")),
-  genderPreference: z.enum(GenderPreferenceEnum).optional().or(z.literal("")),
+  jobTypes: stringOrArray.pipe(z.array(z.enum(JobTypeEnum))).optional().default([]).nullable(),
+  jobSites: stringOrArray.pipe(z.array(z.enum(JobSiteEnum))).optional().default([]).nullable(),
+  experienceLevel: z.enum(ExperienceLevelEnum).optional().or(z.literal("")).nullable(),
+  educationLevel: z.enum(EducationLevelEnum).optional().or(z.literal("")).nullable(),
+  genderPreference: z.enum(GenderPreferenceEnum).optional().or(z.literal("")).nullable(),
 });
 
 const experienceSchema = z.object({

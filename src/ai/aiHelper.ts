@@ -5,6 +5,7 @@ import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { z } from "zod";
 import type { JobListing } from "../lib/jobParser";
+import type { JobFilterPreferencesSchemaType } from "../app/validation";
 
 const CoverLetterSchema = z.object({
   suitableJobs: z.array(
@@ -65,6 +66,7 @@ export type UserProfile = {
     description: string;
     link?: string;
   }>;
+  jobFilterPreferences:JobFilterPreferencesSchemaType | null
 };
 
 function getModel(provider: AIProvider) {
@@ -115,13 +117,14 @@ For each job, you must:
 - Don't waste time generating a cover letter
 
 **Cover Letter Style:**
+- **CRITICAL: Maximum 900 characters (strict limit - the platform rejects anything over 1000)**
 - Professional but conversational tone - avoid being overly formal
-- 3-4 paragraphs maximum
+- 2-3 short paragraphs maximum
 - Start with enthusiasm for the specific role (don't repeat company name unnecessarily)
-- Middle paragraph(s): highlight relevant experience and skills
-- End with a call to action
+- Middle paragraph: highlight 2-3 most relevant experiences/skills only
+- End with a brief call to action
 - Use ${userProfile.personalInfo.fullName}'s actual experience and achievements
-- Make it feel personal, not generic
+- Be concise and impactful - every word counts
 - Write naturally - avoid phrases like "I am pleased to apply" or overly corporate language
 
 **CRITICAL: This cover letter will be directly submitted to the job application form. Do not include:**
@@ -130,8 +133,15 @@ For each job, you must:
 - Overly formal salutations or closings
 - Any formatting that won't work in a plain text field
 - Mistakes or generic content that could hurt the application
+- Unnecessary filler words or repetition
 
-Remember: You're helping a busy professional find the RIGHT opportunities, not just any opportunities. The cover letter you generate will be sent directly to employers, so make it count.`;
+**CHARACTER COUNT REQUIREMENT:**
+- Your cover letter MUST be under 900 characters
+- Count every character including spaces and punctuation
+- If you go over, cut content - don't just summarize, remove entire sentences
+- Prioritize impact over length
+
+Remember: You're helping a busy professional find the RIGHT opportunities, not just any opportunities. The cover letter you generate will be sent directly to employers, so make it count. Keep it concise and under 900 characters!`;
 }
 
 export async function generateCoverLetters(

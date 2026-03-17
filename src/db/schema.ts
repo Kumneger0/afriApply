@@ -11,6 +11,7 @@ export const users = sqliteTable('users', {
   professionalSummary: text('professional_summary'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+  telegramBotToken:text('telegram_bot_token')
 });
 
 export const skills = sqliteTable('skills', {

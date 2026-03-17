@@ -214,7 +214,7 @@ export const ProfileForm = (props: ProfileFormProps) => Layout({
           <label for="sector" class="block text-gray-700 text-sm font-bold mb-2">Sector</label>
           <select id="sector" name="sector" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             <option value="">Select a sector</option>
-            ${SectorEnum.map(sector => html`<option value="${sector}" ${props.jobPreferences?.sector === sector ? 'selected' : ''}>${sector}</option>`).join('')}
+            ${SectorEnum.map(sector => html`<option value="${sector}" ${props.jobPreferences?.sector === sector ? 'selected' : ''}>${sector}</option>`)}
           </select>
           ${props.errors?.sector && props.errors.sector.map(err => html`<p class="text-red-500 text-xs italic mt-1">${err}</p>`)}
         </div>
@@ -224,7 +224,7 @@ export const ProfileForm = (props: ProfileFormProps) => Layout({
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
             ${JobTypeEnum.map(type => html`
               <label class="inline-flex items-center text-gray-700">
-                <input type="checkbox" name="jobTypes" value="${type}"
+                <input type="checkbox" name="jobTypes[]" value="${type}"
                        ${props.jobPreferences?.jobTypes?.includes(type) ? 'checked' : ''}
                        class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
                 <span class="ml-2">${type}</span>
@@ -239,7 +239,7 @@ export const ProfileForm = (props: ProfileFormProps) => Layout({
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
             ${JobSiteEnum.map(site => html`
               <label class="inline-flex items-center text-gray-700">
-                <input type="checkbox" name="jobSites" value="${site}"
+                <input type="checkbox" name="jobSites[]" value="${site}"
                        ${props.jobPreferences?.jobSites?.includes(site) ? 'checked' : ''}
                        class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
                 <span class="ml-2">${site}</span>

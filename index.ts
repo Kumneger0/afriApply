@@ -1,31 +1,27 @@
 import {
-  loginToAfriwork,
-  cleanup,
-  type AuthenticatedSession,
-} from "./src/auth/login.js";
-import {
-  scrapeAllJobs,
-  type JobListing,
-} from "./src/lib/jobParser.js";
-import {
   generateCoverLetters,
   type AIProvider,
   type CoverLetterMatch,
   type UserProfile,
-} from "./src/ai/aiHelper.js";
+} from "./src/ai/aiHelper";
+import {
+  cleanup,
+  loginToAfriwork,
+  type AuthenticatedSession,
+} from "./src/auth/login";
 import {
   fillJobApplicationForm,
   submitJobApplication,
   type ApplicationFormData,
-} from "./src/browser/formFiller.js";
+} from "./src/browser/formFiller";
+import { scrapeAllJobs, type JobListing } from "./src/lib/jobParser";
 
-// --- Hono UI Imports and Setup ---
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import app from "./src/app/index"; // Import your Hono app from src/app/index.tsx
+import app from "./src/app/index";
 import { db } from "./src/db/index.js";
-import { appliedJobs, users, scrapingState } from "./src/db/schema.js";
-import { desc, eq } from "drizzle-orm";
-// --- End Hono UI Imports and Setup ---
+import { appliedJobs, scrapingState, users } from "./src/db/schema";
+import { getScrappingState, getUserProfile } from "./src/lib/utils.js";
 
 interface ScrapingConfig {
   email: string;
@@ -55,7 +51,6 @@ function getConfigFromEnv(): ScrapingConfig {
     provider,
   };
 }
-
 interface ApplicationResult {
   jobId: string;
   jobTitle: string;
@@ -114,7 +109,7 @@ async function applyToSuitableJobs(
       });
 
       result.success = true;
-      
+
       await new Promise((resolve) =>
         setTimeout(resolve, 2000 + Math.random() * 3000),
       );
@@ -141,18 +136,10 @@ async function searchForJobs() {
 
   try {
     const config = getConfigFromEnv();
+   const profileData = await getUserProfile()
+    const lastScrapingState = await getScrappingState()
 
-    const user = await db.select().from(users).limit(1).get();
-    const scrapingStateRecord = user 
-      ? await db
-          .select()
-          .from(scrapingState)
-          .where(eq(scrapingState.userId, user.id))
-          .limit(1)
-          .get()
-      : null;
-    
-    const lastKnownJobId = scrapingStateRecord?.latestJobId ?? "";
+    const lastKnownJobId = lastScrapingState?.latestJobId ?? "";
 
     session = await loginToAfriwork(
       {
@@ -175,65 +162,10 @@ async function searchForJobs() {
     const result = await scrapeAllJobs(
       session.page,
       lastKnownJobId || undefined,
+      profileData.jobFilterPreferences || undefined
     );
 
     if (result.jobs.length > 0) {
-      // Fetch user profile from database
-      const user = await db.select().from(users).limit(1).get();
-      if (!user) {
-        throw new Error('No user profile found. Please set up your profile first at /setup');
-      }
-
-      const userProfile = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.id, user.id),
-        with: {
-          skills: true,
-          experiences: true,
-          educations: true,
-          languages: true,
-          achievements: true,
-          projects: true,
-        },
-      });
-
-      if (!userProfile) {
-        throw new Error('Failed to load user profile');
-      }
-
-      const profileData: UserProfile = {
-        personalInfo: {
-          fullName: userProfile.fullName,
-          email: userProfile.email,
-          phone: userProfile.phone ?? undefined,
-          location: userProfile.location ?? undefined,
-          telegramUsername: userProfile.telegramUsername ?? undefined,
-        },
-        professionalSummary: userProfile.professionalSummary || '',
-        skills: userProfile.skills.map(s => s.name),
-        experience: userProfile.experiences.map(e => ({
-          position: e.position,
-          company: e.company,
-          duration: e.duration,
-          description: e.description,
-        })),
-        education: userProfile.educations[0] ? {
-          degree: userProfile.educations[0].degree,
-          institution: userProfile.educations[0].institution,
-          year: userProfile.educations[0].year,
-        } : {
-          degree: '',
-          institution: '',
-          year: new Date().getFullYear(),
-        },
-        languages: userProfile.languages.map(l => `${l.name} (${l.proficiency})`),
-        achievements: userProfile.achievements.map(a => a.description),
-        projects: userProfile.projects.map(p => ({
-          name: p.name,
-          description: p.description,
-          link: p.link ?? undefined,
-        })),
-      };
-
       let allSuitableJobs: Awaited<
         ReturnType<typeof generateCoverLetters>
       >["suitableJobs"] = [];
@@ -301,8 +233,7 @@ async function searchForJobs() {
               `Saved ${successfulApplications.length} successful applications to database`,
             );
           }
-          
-          // Update the latest scraped job ID after successful applications
+
           if (result.latestJobId) {
             const existing = await db
               .select()
@@ -314,9 +245,9 @@ async function searchForJobs() {
             if (existing) {
               await db
                 .update(scrapingState)
-                .set({ 
+                .set({
                   latestJobId: result.latestJobId,
-                  updatedAt: new Date().toISOString()
+                  updatedAt: new Date().toISOString(),
                 })
                 .where(eq(scrapingState.userId, user.id))
                 .run();
@@ -329,7 +260,7 @@ async function searchForJobs() {
                 })
                 .run();
             }
-            console.log(`Updated latest scraped job ID: ${result.latestJobId}`);
+            console.log(`updated latest scraped job ID: ${result.latestJobId}`);
           }
         }
 
@@ -357,11 +288,14 @@ async function searchForJobs() {
   }
 }
 
-
-app.get('/apply', async (c) => {
-  const response = await searchForJobs()
-  c.json(response)
-})
+app.get("/apply", async (c) => {
+  try {
+    const response = await searchForJobs();
+    c.json(response);
+  } catch (err) {
+    console.error(err);
+  }
+});
 
 const mainApp = new Hono();
 mainApp.route("/", app);
@@ -373,5 +307,5 @@ console.log(`Access the setup page at http://localhost:${port}/setup`);
 Bun.serve({
   fetch: app.fetch,
   port,
-  idleTimeout:60
+  idleTimeout: 60,
 });

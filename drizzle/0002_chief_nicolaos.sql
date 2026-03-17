@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `telegram_bot_token` text;

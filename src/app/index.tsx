@@ -142,6 +142,11 @@ const parseFormData = (
     });
   };
 
+  const jobTypes = Array.isArray(body["jobTypes[]"]) ? body["jobTypes[]"] as string[] : body["jobTypes[]"] ? [body["jobTypes[]"] as string] : [];
+  const jobSites = Array.isArray(body["jobSites[]"]) ? body["jobSites[]"] as string[] : body["jobSites[]"] ? [body["jobSites[]"] as string] : [];
+  const skills = Array.isArray(body["skills[]"]) ? body["skills[]"] as string[] : body["skills[]"] ? [body["skills[]"] as string] : [];
+  const achievements = Array.isArray(body["achievements[]"]) ? body["achievements[]"] as string[] : body["achievements[]"] ? [body["achievements[]"] as string] : [];
+
   return {
     fullName: body.fullName,
     email: body.email,
@@ -150,12 +155,12 @@ const parseFormData = (
     telegramUsername: body.telegramUsername || undefined,
     professionalSummary: body.professionalSummary || undefined,
     sector: body.sector || undefined,
-    jobTypes: body.jobTypes,
-    jobSites: body.jobSites,
+    jobTypes: jobTypes,
+    jobSites: jobSites,
     experienceLevel: body.experienceLevel || undefined,
     educationLevel: body.educationLevel || undefined,
     genderPreference: body.genderPreference || undefined,
-    skills: body["skills[]"],
+    skills: skills,
     experiences: mapArrayFields("experience", [
       "position",
       "company",
@@ -164,7 +169,7 @@ const parseFormData = (
     ]),
     educations: mapArrayFields("education", ["degree", "institution", "year"]),
     languages: mapArrayFields("language", ["name", "proficiency"]),
-    achievements: body["achievements[]"],
+    achievements: achievements,
     projects: mapArrayFields("project", ["name", "description", "link"]),
   };
 };
@@ -289,6 +294,7 @@ const upsertJobPreferences = async (
 
 app.post("/setup", async (c) => {
   const body = await c.req.parseBody();
+  Bun.write('fuck.json', JSON.stringify(body))
   const rawData = parseFormData(body);
 
   const parsed = ProfileSetupFormSchema.safeParse({
@@ -352,6 +358,25 @@ app.post("/setup", async (c) => {
       achievementsData: parsed.data.achievements,
       projectsData: parsed.data.projects,
     };
+
+
+    console.log('Raw form data:', {
+      jobTypes: body["jobTypes[]"],
+      jobSites: body["jobSites[]"],
+      sector: body.sector,
+      experienceLevel: body.experienceLevel,
+      educationLevel: body.educationLevel,
+      genderPreference: body.genderPreference
+    });
+
+    console.log('Parsed job preferences:', {
+      sector: rawData.sector,
+      jobTypes: rawData.jobTypes,
+      jobSites: rawData.jobSites,
+      experienceLevel: rawData.experienceLevel,
+      educationLevel: rawData.educationLevel,
+      genderPreference: rawData.genderPreference,
+    });
 
     await saveProfileData(userId, profileData);
     await upsertJobPreferences(userId, parsed.data.jobPreferences);
