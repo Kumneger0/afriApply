@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import {
   generateCoverLetters,
   type AIProvider,
@@ -22,6 +23,7 @@ import app from "./src/app/index";
 import { db } from "./src/db/index.js";
 import { appliedJobs, scrapingState, users } from "./src/db/schema";
 import { getScrappingState, getUserProfile } from "./src/lib/utils.js";
+import { sendNotification, handleWebhook, setWebhook } from './src/telegram/bot.js';
 
 interface ScrapingConfig {
   email: string;
@@ -120,14 +122,6 @@ async function applyToSuitableJobs(
 
     results.push(result);
   }
-
-  const fs = await import("fs");
-  fs.writeFileSync(
-    "application-results.json",
-    JSON.stringify(results, null, 2),
-  );
-  console.log(`Application results saved to application-results.json`);
-
   return results;
 }
 
@@ -210,6 +204,47 @@ async function searchForJobs() {
           result.jobs,
         );
 
+        const successfulApps = applicationResults.filter(app => app.success);
+        const failedApps = applicationResults.filter(app => !app.success);
+        
+        let notificationMessage = "**Job Application Update**\n\n";
+        
+        if (successfulApps.length > 0) {
+          notificationMessage += `**Successfully Applied to ${successfulApps.length} job${successfulApps.length > 1 ? 's' : ''}:**\n\n`;
+          successfulApps.forEach(app => {
+            notificationMessage += `**${app.jobTitle}** at ${app.company}\n`;
+            notificationMessage += `Cover Letter Used:\n"${app.coverLetterUsed}"\n\n`;
+          });
+        }
+        
+        if (failedApps.length > 0) {
+          notificationMessage += `**Failed to apply to ${failedApps.length} job${failedApps.length > 1 ? 's' : ''}:**\n\n`;
+          failedApps.forEach(app => {
+            notificationMessage += `**${app.jobTitle}** at ${app.company}\n`;
+            notificationMessage += `Error: ${app.error || 'Unknown error'}\n`;
+            notificationMessage += `Cover Letter Prepared:\n"${app.coverLetterUsed}"\n\n`;
+          });
+        }
+        
+        if (allRejectedJobs.length > 0) {
+          notificationMessage += `**Found ${result.jobs.length} new jobs, but ${allRejectedJobs.length} didn't match your profile criteria.**\n\n`;
+        }
+        
+        notificationMessage += `**Summary:**\n`;
+        notificationMessage += `• Total jobs found: ${result.jobs.length}\n`;
+        notificationMessage += `• Suitable matches: ${allSuitableJobs.length}\n`;
+        notificationMessage += `• Successful applications: ${successfulApps.length}\n\n`;
+        
+        if (successfulApps.length > 0) {
+          notificationMessage += `Great job! Your applications have been submitted successfully.`;
+        } else if (allSuitableJobs.length > 0) {
+          notificationMessage += `Some applications encountered issues. Please check the logs for details.`;
+        } else {
+          notificationMessage += `No suitable job matches found this time. Your preferences might be too specific, or try again later for new postings.`;
+        }
+
+        await sendNotification(notificationMessage);
+
         const user = await db.select().from(users).limit(1).get();
         if (user) {
           const successfulApplications = applicationResults.filter(
@@ -271,11 +306,40 @@ async function searchForJobs() {
         };
       } else {
         console.log("no suitable jobs found for application");
+        
+        let notificationMessage = "**Job Search Update**\n\n";
+        
+        if (result.jobs.length > 0) {
+          notificationMessage += `Found ${result.jobs.length} new job${result.jobs.length > 1 ? 's' : ''}, but none matched your profile criteria.\n\n`;
+          
+          if (allRejectedJobs.length > 0) {
+            notificationMessage += `**Common reasons for not matching:**\n`;
+            const rejectionReasons = allRejectedJobs.slice(0, 3).map(job => `• ${job.rejectionReason}`).join('\n');
+            notificationMessage += rejectionReasons + '\n\n';
+          }
+          
+          notificationMessage += `**Suggestions:**\n`;
+          notificationMessage += `• Consider broadening your job preferences\n`;
+          notificationMessage += `• Update your skills or experience if needed\n`;
+          notificationMessage += `• Check back later for new job postings\n\n`;
+          notificationMessage += `The system will continue monitoring for new opportunities that match your profile.`;
+        } else {
+          notificationMessage += `No new jobs found since the last check.\n\n`;
+          notificationMessage += `This means you're up to date with the latest postings! The system will keep monitoring for new opportunities.`;
+        }
+        
+        await sendNotification(notificationMessage);
       }
 
       if (result.hasMorePages) {
       }
     } else {
+      await sendNotification(
+        "**Job Search Update**\n\n" +
+        "No new jobs found since the last check.\n\n" +
+        "You're all caught up! The system will continue monitoring for new job postings that match your profile.\n\n" +
+        "Next check will happen automatically."
+      );
     }
   } catch (error) {
     console.error("Error during job scraping:", error);
@@ -296,6 +360,9 @@ app.get("/apply", async (c) => {
     console.error(err);
   }
 });
+
+
+app.post("/webhook/telegram", handleWebhook);
 
 const mainApp = new Hono();
 mainApp.route("/", app);

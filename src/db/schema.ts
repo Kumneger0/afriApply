@@ -8,10 +8,10 @@ export const users = sqliteTable('users', {
   phone: text('phone'),
   location: text('location'),
   telegramUsername: text('telegram_username'),
+  telegramChatId: text('telegram_chat_id').unique(),
   professionalSummary: text('professional_summary'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
-  telegramBotToken:text('telegram_bot_token')
 });
 
 export const skills = sqliteTable('skills', {

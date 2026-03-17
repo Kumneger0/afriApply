@@ -294,7 +294,6 @@ const upsertJobPreferences = async (
 
 app.post("/setup", async (c) => {
   const body = await c.req.parseBody();
-  Bun.write('fuck.json', JSON.stringify(body))
   const rawData = parseFormData(body);
 
   const parsed = ProfileSetupFormSchema.safeParse({
