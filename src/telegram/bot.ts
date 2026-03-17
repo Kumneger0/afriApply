@@ -21,7 +21,7 @@ export async function setWebhook(webhookUrl?: string) {
     return false;
   }
 
-  const url = webhookUrl || `${process.env.WEBHOOK_URL}/webhook/telegram`;
+  const url = webhookUrl || `${process.env.BASE_URL}/webhook/telegram`;
   
   try {
     await bot.api.setWebhook(url);
@@ -33,7 +33,7 @@ export async function setWebhook(webhookUrl?: string) {
   }
 }
 
-if(process.env.WEBHOOK_URL){
+if(process.env.BASE_URL){
   console.log('setting up webhook endpoint')
   setWebhook().catch(console.error);
 }

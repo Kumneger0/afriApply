@@ -2,6 +2,8 @@
 
 AfriApply is an intelligent job application automation tool that helps job seekers on Afriwork by automatically finding suitable positions, generating personalized cover letters using AI, and submitting applications on their behalf. The system includes Telegram notifications to keep users updated on their job search progress.
 
+**⚠️ Self-Hosted Only**: AfriApply is a self-hosted solution. There is no hosted version available - you must run it on your own infrastructure. This ensures your personal data and credentials remain under your control.
+
 ⚠️ **WARNING**: This tool will automatically apply to jobs that match your profile criteria. Make sure your profile and preferences are accurately configured before running the automation. Review your settings carefully as applications will be submitted without manual approval.
 
 ## 🚀 Features
@@ -31,6 +33,7 @@ AfriApply is an intelligent job application automation tool that helps job seeke
 - Afriwork account credentials
 - AI API key (OpenAI, Anthropic, Google, or Groq)
 - Telegram Bot Token for notifications
+- Turso account for LibSQL database
 
 ## 🔧 Installation
 
@@ -68,7 +71,7 @@ AfriApply is an intelligent job application automation tool that helps job seeke
 
    # Telegram Bot
    BOT_TOKEN=your-telegram-bot-token
-   WEBHOOK_URL=your-webhook-url
+   BASE_URL=your-app-base-url
 
    # Server Configuration
    PORT=3000
@@ -124,6 +127,34 @@ curl http://localhost:3000/apply
 
 **Automated scheduling:**
 Set up a cron job or use a task scheduler to periodically trigger the job search.
+
+## 🐳 Docker Deployment
+
+For production deployment, you can use Docker:
+
+**Option 1: Use pre-built image from Docker Hub**
+```bash
+# Pull and run the pre-built image
+docker run -p 3000:3000 --env-file .env kumneger0/afriapply:latest
+
+```
+
+**Option 2: Build your own image**
+```bash
+# Build the Docker image locally
+docker build -t afriapply .
+
+# Run with environment file
+docker run -p 3000:3000 --env-file .env afriapply
+```
+
+## 🚀 Self-Hosting Requirements
+
+Since AfriApply is self-hosted, you'll need:
+
+- A server or VPS with sufficient resources
+- SSL certificate (recommended for production)
+- Cron job or task scheduler for automated job searches
 
 ## 🤖 AI Integration
 
