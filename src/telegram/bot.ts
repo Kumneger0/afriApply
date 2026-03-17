@@ -6,8 +6,11 @@ const bot = new Bot(process.env.BOT_TOKEN as string);
 
 bot.command("start", async (ctx) => {
   const chatId = ctx.chat.id;
-  await updateTelegramChatId(chatId.toString());
-  await ctx.reply("Welcome!");
+  if(await updateTelegramChatId(chatId.toString())){
+    await ctx.reply("🎉 Welcome to AfriApply! You're all set to receive job notifications and updates directly here.");
+  } else {
+    await ctx.reply("👋 Welcome to AfriApply! To receive personalized job notifications, please make sure you've set up your profile first in the application, then try this command again.");
+  }
 });
 
 export const handleWebhook = webhookCallback(bot, "hono");

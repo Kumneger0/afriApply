@@ -1,5 +1,5 @@
 import { sql, relations } from 'drizzle-orm';
-import { text, integer, sqliteTable } from 'drizzle-orm/sqlite-core';
+import { text, integer, sqliteTable,  } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -12,6 +12,7 @@ export const users = sqliteTable('users', {
   professionalSummary: text('professional_summary'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+  portfolioLinks: text('portfolio_links', { mode: 'json' }).$type<string[]>().default([]),
 });
 
 export const skills = sqliteTable('skills', {

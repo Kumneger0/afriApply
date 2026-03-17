@@ -1,5 +1,5 @@
 import { Page } from "puppeteer";
-import type { JobFilterPreferencesSchemaType } from "../app/validation";
+import type { getUserProfile } from "./utils";
 
 export interface JobListing {
   id: string;
@@ -131,10 +131,10 @@ export async function clickLoadMore(page: Page): Promise<boolean> {
 
 async function applyJobFilters(
   page: Page,
-  jobFilterPreferences: JobFilterPreferencesSchemaType,
+  jobFilterPreferences: Awaited<ReturnType<typeof getUserProfile>>['jobFilterPreferences'],
 ): Promise<void> {
   try {
-    if (jobFilterPreferences.sector) {
+    if (jobFilterPreferences?.sector) {
       try {
         await page.evaluate((sector) => {
           const comboboxButton = document.querySelector(
@@ -167,12 +167,13 @@ async function applyJobFilters(
       }
     }
 
+    const jobTypes = (jobFilterPreferences?.jobTypes ?? []).flat()
     if (
-      jobFilterPreferences.jobTypes &&
-      jobFilterPreferences.jobTypes.length > 0
+      jobTypes &&
+      jobTypes.length > 0
     ) {
       try {
-        for (const jobType of jobFilterPreferences.jobTypes) {
+        for (const jobType of jobTypes) {
           await page.evaluate((type) => {
             const labels = Array.from(document.querySelectorAll("label"));
             const label = labels.find((l) => l.textContent?.trim() === type);
@@ -201,13 +202,16 @@ async function applyJobFilters(
         console.log("Could not apply job types filter:", error);
       }
     }
+   
+    const jobSites = (jobFilterPreferences?.jobSites ?? []).flat()
+
 
     if (
-      jobFilterPreferences.jobSites &&
-      jobFilterPreferences.jobSites.length > 0
+      jobSites &&
+      jobSites.length > 0
     ) {
       try {
-        for (const jobSite of jobFilterPreferences.jobSites) {
+        for (const jobSite of jobSites) {
           await page.evaluate((site) => {
             const labels = Array.from(document.querySelectorAll("label"));
             const label = labels.find((l) => l.textContent?.trim() === site);
@@ -237,7 +241,7 @@ async function applyJobFilters(
       }
     }
 
-    if (jobFilterPreferences.experienceLevel) {
+    if (jobFilterPreferences?.experienceLevel) {
       try {
         await page.evaluate((level) => {
           const labels = Array.from(document.querySelectorAll("label"));
@@ -267,7 +271,7 @@ async function applyJobFilters(
       }
     }
 
-    if (jobFilterPreferences.educationLevel) {
+    if (jobFilterPreferences?.educationLevel) {
       try {
         await page.evaluate((level) => {
           const labels = Array.from(document.querySelectorAll("label"));
@@ -297,7 +301,7 @@ async function applyJobFilters(
       }
     }
 
-    if (jobFilterPreferences.genderPreference) {
+    if (jobFilterPreferences?.genderPreference) {
       try {
         await page.evaluate((gender) => {
           const labels = Array.from(document.querySelectorAll("label"));
@@ -336,7 +340,7 @@ async function applyJobFilters(
 export async function scrapeAllJobs(
   page: Page,
   lastKnownJobId?: string,
-  jobFilterPreferences?: JobFilterPreferencesSchemaType,
+  jobFilterPreferences?: Awaited<ReturnType<typeof getUserProfile>>['jobFilterPreferences'],
 ): Promise<ScrapingResult> {
   const allJobs: JobListing[] = [];
   const maxPages = 2;

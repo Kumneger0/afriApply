@@ -1,9 +1,8 @@
-import 'dotenv/config';
+import "dotenv/config";
 import {
   generateCoverLetters,
-  type AIProvider,
+  getAiProvider,
   type CoverLetterMatch,
-  type UserProfile,
 } from "./src/ai/aiHelper";
 import {
   cleanup,
@@ -23,7 +22,10 @@ import app from "./src/app/index";
 import { db } from "./src/db/index.js";
 import { appliedJobs, scrapingState, users } from "./src/db/schema";
 import { getScrappingState, getUserProfile } from "./src/lib/utils.js";
-import { sendNotification, handleWebhook, setWebhook } from './src/telegram/bot.js';
+import {
+  handleWebhook,
+  sendNotification
+} from "./src/telegram/bot.js";
 
 interface ScrapingConfig {
   email: string;
@@ -31,13 +33,12 @@ interface ScrapingConfig {
   baseUrl: string;
   headless?: boolean;
   outputFile?: string;
-  provider: AIProvider;
 }
 
 function getConfigFromEnv(): ScrapingConfig {
   const email = process.env.AFRIWORK_EMAIL;
   const password = process.env.AFRIWORK_PASSWORD;
-  const provider = process.env.AI_PROVIDER as AIProvider | undefined;
+  const provider = getAiProvider();
 
   if (!email || !password || !provider) {
     throw new Error(
@@ -50,7 +51,6 @@ function getConfigFromEnv(): ScrapingConfig {
     password,
     baseUrl: process.env.AFRIWORK_BASE_URL || "https://afriworket.com",
     headless: process.env.HEADLESS !== "false",
-    provider,
   };
 }
 interface ApplicationResult {
@@ -67,7 +67,7 @@ interface ApplicationResult {
 async function applyToSuitableJobs(
   session: AuthenticatedSession,
   suitableJobs: CoverLetterMatch[],
-  profileData: UserProfile,
+  profileData: Awaited<ReturnType<typeof getUserProfile>>,
   baseUrl: string,
   allJobs: JobListing[],
 ): Promise<ApplicationResult[]> {
@@ -99,8 +99,8 @@ async function applyToSuitableJobs(
 
       const formData: ApplicationFormData = {
         coverLetter: job.coverLetter,
-        telegramUsername: profileData.personalInfo.telegramUsername,
-        portfolioLinks: profileData.personalInfo.portfolioLinks || [],
+        telegramUsername: profileData.telegramUsername,
+        portfolioLinks: profileData.portfolioLinks || [],
       };
 
       await fillJobApplicationForm(session.page, formData, { timeout: 10000 });
@@ -130,8 +130,8 @@ async function searchForJobs() {
 
   try {
     const config = getConfigFromEnv();
-   const profileData = await getUserProfile()
-    const lastScrapingState = await getScrappingState()
+    const profileData = await getUserProfile();
+    const lastScrapingState = await getScrappingState();
 
     const lastKnownJobId = lastScrapingState?.latestJobId ?? "";
 
@@ -156,7 +156,7 @@ async function searchForJobs() {
     const result = await scrapeAllJobs(
       session.page,
       lastKnownJobId || undefined,
-      profileData.jobFilterPreferences || undefined
+      profileData.jobFilterPreferences || undefined,
     );
 
     if (result.jobs.length > 0) {
@@ -179,7 +179,6 @@ async function searchForJobs() {
           const { suitableJobs, rejectedJobs } = await generateCoverLetters(
             profileData,
             chunk,
-            config.provider,
           );
 
           allSuitableJobs.push(...suitableJobs);
@@ -204,37 +203,37 @@ async function searchForJobs() {
           result.jobs,
         );
 
-        const successfulApps = applicationResults.filter(app => app.success);
-        const failedApps = applicationResults.filter(app => !app.success);
-        
+        const successfulApps = applicationResults.filter((app) => app.success);
+        const failedApps = applicationResults.filter((app) => !app.success);
+
         let notificationMessage = "**Job Application Update**\n\n";
-        
+
         if (successfulApps.length > 0) {
-          notificationMessage += `**Successfully Applied to ${successfulApps.length} job${successfulApps.length > 1 ? 's' : ''}:**\n\n`;
-          successfulApps.forEach(app => {
+          notificationMessage += `**Successfully Applied to ${successfulApps.length} job${successfulApps.length > 1 ? "s" : ""}:**\n\n`;
+          successfulApps.forEach((app) => {
             notificationMessage += `**${app.jobTitle}** at ${app.company}\n`;
             notificationMessage += `Cover Letter Used:\n"${app.coverLetterUsed}"\n\n`;
           });
         }
-        
+
         if (failedApps.length > 0) {
-          notificationMessage += `**Failed to apply to ${failedApps.length} job${failedApps.length > 1 ? 's' : ''}:**\n\n`;
-          failedApps.forEach(app => {
+          notificationMessage += `**Failed to apply to ${failedApps.length} job${failedApps.length > 1 ? "s" : ""}:**\n\n`;
+          failedApps.forEach((app) => {
             notificationMessage += `**${app.jobTitle}** at ${app.company}\n`;
-            notificationMessage += `Error: ${app.error || 'Unknown error'}\n`;
+            notificationMessage += `Error: ${app.error || "Unknown error"}\n`;
             notificationMessage += `Cover Letter Prepared:\n"${app.coverLetterUsed}"\n\n`;
           });
         }
-        
+
         if (allRejectedJobs.length > 0) {
           notificationMessage += `**Found ${result.jobs.length} new jobs, but ${allRejectedJobs.length} didn't match your profile criteria.**\n\n`;
         }
-        
+
         notificationMessage += `**Summary:**\n`;
         notificationMessage += `• Total jobs found: ${result.jobs.length}\n`;
         notificationMessage += `• Suitable matches: ${allSuitableJobs.length}\n`;
         notificationMessage += `• Successful applications: ${successfulApps.length}\n\n`;
-        
+
         if (successfulApps.length > 0) {
           notificationMessage += `Great job! Your applications have been submitted successfully.`;
         } else if (allSuitableJobs.length > 0) {
@@ -306,18 +305,21 @@ async function searchForJobs() {
         };
       } else {
         console.log("no suitable jobs found for application");
-        
+
         let notificationMessage = "**Job Search Update**\n\n";
-        
+
         if (result.jobs.length > 0) {
-          notificationMessage += `Found ${result.jobs.length} new job${result.jobs.length > 1 ? 's' : ''}, but none matched your profile criteria.\n\n`;
-          
+          notificationMessage += `Found ${result.jobs.length} new job${result.jobs.length > 1 ? "s" : ""}, but none matched your profile criteria.\n\n`;
+
           if (allRejectedJobs.length > 0) {
             notificationMessage += `**Common reasons for not matching:**\n`;
-            const rejectionReasons = allRejectedJobs.slice(0, 3).map(job => `• ${job.rejectionReason}`).join('\n');
-            notificationMessage += rejectionReasons + '\n\n';
+            const rejectionReasons = allRejectedJobs
+              .slice(0, 3)
+              .map((job) => `• ${job.rejectionReason}`)
+              .join("\n");
+            notificationMessage += rejectionReasons + "\n\n";
           }
-          
+
           notificationMessage += `**Suggestions:**\n`;
           notificationMessage += `• Consider broadening your job preferences\n`;
           notificationMessage += `• Update your skills or experience if needed\n`;
@@ -327,7 +329,7 @@ async function searchForJobs() {
           notificationMessage += `No new jobs found since the last check.\n\n`;
           notificationMessage += `This means you're up to date with the latest postings! The system will keep monitoring for new opportunities.`;
         }
-        
+
         await sendNotification(notificationMessage);
       }
 
@@ -336,9 +338,9 @@ async function searchForJobs() {
     } else {
       await sendNotification(
         "**Job Search Update**\n\n" +
-        "No new jobs found since the last check.\n\n" +
-        "You're all caught up! The system will continue monitoring for new job postings that match your profile.\n\n" +
-        "Next check will happen automatically."
+          "No new jobs found since the last check.\n\n" +
+          "You're all caught up! The system will continue monitoring for new job postings that match your profile.\n\n" +
+          "Next check will happen automatically.",
       );
     }
   } catch (error) {
@@ -360,7 +362,6 @@ app.get("/apply", async (c) => {
     console.error(err);
   }
 });
-
 
 app.post("/webhook/telegram", handleWebhook);
 

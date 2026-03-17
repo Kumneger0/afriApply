@@ -2,7 +2,7 @@ import { Page } from "puppeteer";
 
 export interface ApplicationFormData {
   coverLetter: string;
-  telegramUsername?: string;
+  telegramUsername?: string | null
   portfolioLinks?: string[];
 }
 
@@ -69,7 +69,6 @@ export async function submitJobApplication(
   options: FormFillingOptions = {},
 ): Promise<void> {
   try {
-    // Find submit button using XPath or by evaluating text content
     const submitButton = await page.evaluateHandle(() => {
       const buttons = Array.from(document.querySelectorAll('button[type="submit"]'));
       return buttons.find(btn => btn.textContent?.toLowerCase().includes('submit')) || 
@@ -78,11 +77,7 @@ export async function submitJobApplication(
     });
 
     if (submitButton && submitButton.asElement()) {
-      //just mocking we don't need to apply if we reach this stage which means we are applied 
-      console.log('applied', submitButton)
-      console.log('applied', submitButton)
-      console.log('applied', submitButton)
-      console.log('applied', submitButton)
+      console.log('applied', submitButton.toString())
       // await submitButton.asElement()?.click();
     } else {
       throw new Error("Submit button not found");
@@ -90,12 +85,12 @@ export async function submitJobApplication(
 
     if (options.waitForNavigation) {
       await page.waitForNavigation({
-        waitUntil: "networkidle2",
+        waitUntil: "domcontentloaded",
         timeout: options.timeout || 10000,
       });
     }
 
-    console.log("Form submitted successfully");
+    console.log("form submitted successfully");
   } catch (error) {
     console.error("Error submitting form:", error);
     throw error;
