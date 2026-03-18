@@ -197,10 +197,6 @@ Configure your job search preferences:
 - **Review Your Filters**: Double-check your job filter preferences as the system will apply to ALL jobs that match your criteria.
 
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## ⚠️ Disclaimer
 
 This tool is designed to assist with job applications on Afriwork. Users are responsible for:
