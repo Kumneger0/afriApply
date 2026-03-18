@@ -84,10 +84,35 @@ AfriApply is an intelligent job application automation tool that helps job seeke
    bun run db:migrate
    ```
 
-5. **Seed initial data (optional)**
+5. **Set up your profile data**
    ```bash
+   # Edit profile-data.json with your information, then run:
    bun run seed
    ```
+   
+   **Alternative Profile Setup**: Instead of using the web form, you can edit the `profile-data.json` file with your personal information and run `bun run seed` to quickly populate your profile.
+
+## � Profile Setup Options
+
+### Web Form Interface
+Navigate to `/setup` and fill out the comprehensive profile form with all your professional information.
+
+### JSON File Method (Recommended for Quick Setup)
+1. Open `profile-data.json` in your project root
+2. Replace the sample data with your information:
+   - Personal details (name, email, phone, location, portfolio links)
+   - Professional summary
+   - Skills array
+   - Work experience with positions, companies, and descriptions
+   - Education with degrees, institutions, and years
+   - Languages with proficiency levels
+   - Achievements and certifications
+   - Projects with descriptions and links
+   - Job search preferences (sector, job types, work locations, experience level, etc.)
+3. Run `bun run seed` to populate your profile
+4. This method is faster and less intimidating than the web form
+
+**Available Options**: See the comments in `seed.ts` for all available sector options, job types, experience levels, and other enum values.
 
 ## 🚀 Usage
 
@@ -101,15 +126,23 @@ The server will start on `http://localhost:3000`
 
 ### 2. Set Up Your Profile
 
+**Option A: Web Interface**
 1. Navigate to `http://localhost:3000/setup`
-2. Fill out your professional information:
-   - Personal details (name, email, location)
+2. Fill out your professional information through the web form
+
+**Option B: JSON File (Recommended - Easier)**
+1. Edit the `profile-data.json` file with your information:
+   - Personal details (name, email, phone, location)
    - Professional summary
-   - Skills and experience
-   - Education background
-   - Portfolio links
-   - Job preferences and filters
-   - Telegram username (recommended for employer communication on Afriwork)
+   - Skills array
+   - Work experience
+   - Education
+   - Languages with proficiency levels
+   - Achievements
+   - Projects with descriptions and links
+   - Job search preferences (sector, job types, locations, etc.)
+2. Run `bun run seed` to populate your profile
+3. This method is faster and less intimidating than the web form
 
 ### 3. Configure Telegram Notifications
 
