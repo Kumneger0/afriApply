@@ -11,15 +11,22 @@ export interface LoginOptions {
   baseUrl?: string;
 }
 
- export interface AuthenticatedSession {
+export interface AuthenticatedSession {
   browser: Browser;
   page: Page;
 }
 
 async function createBrowser(options: LoginOptions = {}): Promise<Browser> {
   return await puppeteer.launch({
-    headless: options.headless ?? false,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    executablePath: "/usr/bin/google-chrome",
+    headless: !!options.headless,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--user-data-dir=/tmp/chrome-data",
+    ],
   });
 }
 
@@ -102,7 +109,9 @@ export async function loginToAfriwork(
     await page.click('button[type="submit"]');
     const navPromise = page
       .waitForNavigation({ waitUntil: "networkidle2", timeout: 10000 })
-      .catch((err) => {console.error(err)});
+      .catch((err) => {
+        console.error(err);
+      });
     await new Promise((res) => setTimeout(res, 5000));
     await navPromise;
 
@@ -123,19 +132,19 @@ export async function isLoggedIn(page: Page): Promise<boolean> {
   try {
     await page.goto("https://afriworket.com/profiles", {
       waitUntil: "networkidle2",
-      timeout: 100000
+      timeout: 100000,
     });
-    
+
     const currentUrl = page.url();
-    
+
     if (currentUrl.includes("/auth/login")) {
       return false;
     }
-    
+
     if (currentUrl.includes("/profiles")) {
       return true;
     }
-    
+
     return false;
   } catch {
     return false;

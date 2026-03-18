@@ -15,12 +15,11 @@ import {
 import { ProfileForm } from "./profile-form";
 import {
   ProfileSetupFormSchema,
-  type JobFilterPreferencesSchemaType,
-  type UserSchemaType,
-  type ExperienceType,
   type EducationType,
+  type ExperienceType,
+  type JobFilterPreferencesSchemaType,
   type LanguageType,
-  type ProjectType,
+  type ProjectType
 } from "./validation";
 
 const app = new Hono();
@@ -34,9 +33,7 @@ type ProfileData = {
   projectsData: ProjectType[];
 };
 
-
-
-const fetchUserProfile = async (userId: number) => {
+export const fetchUserProfile = async (userId: number) => {
   const user = await db.query.users.findFirst({
     where: (users, { eq }) => eq(users.id, userId),
     with: {
@@ -56,41 +53,46 @@ const fetchUserProfile = async (userId: number) => {
   }
 
   return {
+    ...user,
     skills: user.skills.map((s) => s.name),
-    experiences: user.experiences.map((e) => ({ 
-      position: e.position, 
-      company: e.company, 
-      duration: e.duration, 
-      description: e.description 
+    experiences: user.experiences.map((e) => ({
+      position: e.position,
+      company: e.company,
+      duration: e.duration,
+      description: e.description,
     })),
-    educations: user.educations.map((e) => ({ 
-      degree: e.degree, 
-      institution: e.institution, 
-      year: e.year 
+    educations: user.educations.map((e) => ({
+      degree: e.degree,
+      institution: e.institution,
+      year: e.year,
     })),
-    languages: user.languages.map((l) => ({ 
-      name: l.name, 
-      proficiency: l.proficiency 
+    languages: user.languages.map((l) => ({
+      name: l.name,
+      proficiency: l.proficiency,
     })),
     achievements: user.achievements.map((a) => a.description),
-    projects: user.projects.map((p) => ({ 
-      name: p.name, 
-      description: p.description, 
-      link: p.link ?? undefined 
+    projects: user.projects.map((p) => ({
+      name: p.name,
+      description: p.description,
+      link: p.link ?? undefined,
     })),
-    appliedJobs: user.appliedJobs.map((j) => ({ 
-      jobId: j.jobId, 
-      description: j.description, 
-      appliedAt: j.appliedAt 
+    appliedJobs: user.appliedJobs.map((j) => ({
+      jobId: j.jobId,
+      description: j.description,
+      appliedAt: j.appliedAt,
     })),
-    jobPreferences: user.jobFilterPreferences ? {
-      sector: user.jobFilterPreferences.sector ?? undefined,
-      jobTypes: (user.jobFilterPreferences.jobTypes ?? []).flat(),
-      jobSites: (user.jobFilterPreferences.jobSites ?? []).flat(),
-      experienceLevel: user.jobFilterPreferences.experienceLevel ?? undefined,
-      educationLevel: user.jobFilterPreferences.educationLevel ?? undefined,
-      genderPreference: user.jobFilterPreferences.genderPreference ?? undefined,
-    } : undefined,
+    jobPreferences: user.jobFilterPreferences
+      ? {
+          sector: user.jobFilterPreferences.sector ?? undefined,
+          jobTypes: (user.jobFilterPreferences.jobTypes ?? []).flat(),
+          jobSites: (user.jobFilterPreferences.jobSites ?? []).flat(),
+          experienceLevel:
+            user.jobFilterPreferences.experienceLevel ?? undefined,
+          educationLevel: user.jobFilterPreferences.educationLevel ?? undefined,
+          genderPreference:
+            user.jobFilterPreferences.genderPreference ?? undefined,
+        }
+      : undefined,
   };
 };
 
@@ -102,19 +104,7 @@ app.get("/setup", async (c) => {
   }
 
   const profile = await fetchUserProfile(existingUser.id);
-
-  return c.html(
-    <ProfileForm
-      user={{
-        fullName: existingUser.fullName,
-        email: existingUser.email,
-        phone: existingUser.phone ?? undefined,
-        location: existingUser.location ?? undefined,
-        telegramUsername: existingUser.telegramUsername ?? undefined,
-      }}
-      {...profile}
-    />,
-  );
+  return c.html(<ProfileForm data={profile} />);
 });
 
 const parseFormData = (
@@ -142,10 +132,31 @@ const parseFormData = (
     });
   };
 
-  const jobTypes = Array.isArray(body["jobTypes[]"]) ? body["jobTypes[]"] as string[] : body["jobTypes[]"] ? [body["jobTypes[]"] as string] : [];
-  const jobSites = Array.isArray(body["jobSites[]"]) ? body["jobSites[]"] as string[] : body["jobSites[]"] ? [body["jobSites[]"] as string] : [];
-  const skills = Array.isArray(body["skills[]"]) ? body["skills[]"] as string[] : body["skills[]"] ? [body["skills[]"] as string] : [];
-  const achievements = Array.isArray(body["achievements[]"]) ? body["achievements[]"] as string[] : body["achievements[]"] ? [body["achievements[]"] as string] : [];
+  const jobTypes = Array.isArray(body["jobTypes[]"])
+    ? (body["jobTypes[]"] as string[])
+    : body["jobTypes[]"]
+      ? [body["jobTypes[]"] as string]
+      : [];
+  const jobSites = Array.isArray(body["jobSites[]"])
+    ? (body["jobSites[]"] as string[])
+    : body["jobSites[]"]
+      ? [body["jobSites[]"] as string]
+      : [];
+  const skills = Array.isArray(body["skills[]"])
+    ? (body["skills[]"] as string[])
+    : body["skills[]"]
+      ? [body["skills[]"] as string]
+      : [];
+  const achievements = Array.isArray(body["achievements[]"])
+    ? (body["achievements[]"] as string[])
+    : body["achievements[]"]
+      ? [body["achievements[]"] as string]
+      : [];
+  const portfolioLinks = Array.isArray(body["portfolioLinks[]"])
+    ? (body["portfolioLinks[]"] as string[])
+    : body["portfolioLinks[]"]
+      ? [body["portfolioLinks[]"] as string]
+      : [];
 
   return {
     fullName: body.fullName,
@@ -154,6 +165,7 @@ const parseFormData = (
     location: body.location || undefined,
     telegramUsername: body.telegramUsername || undefined,
     professionalSummary: body.professionalSummary || undefined,
+    portfolioLinks: portfolioLinks,
     sector: body.sector || undefined,
     jobTypes: jobTypes,
     jobSites: jobSites,
@@ -304,6 +316,7 @@ app.post("/setup", async (c) => {
       location: rawData.location,
       telegramUsername: rawData.telegramUsername,
       professionalSummary: rawData.professionalSummary,
+      portfolioLinks: rawData.portfolioLinks,
     },
     jobPreferences: {
       sector: rawData.sector,
@@ -322,10 +335,11 @@ app.post("/setup", async (c) => {
   });
 
   if (!parsed.success) {
+    const existingUser = await db.select().from(users).limit(1).get();
+    const profile = existingUser ? await fetchUserProfile(existingUser.id) : null;
     return c.html(
       <ProfileForm
-        user={rawData as unknown as UserSchemaType}
-        jobPreferences={rawData as unknown as JobFilterPreferencesSchemaType}
+        data={profile || undefined}
         errors={formatValidationErrors(parsed.error)}
       />,
     );
@@ -358,50 +372,24 @@ app.post("/setup", async (c) => {
       projectsData: parsed.data.projects,
     };
 
-
-    console.log('Raw form data:', {
-      jobTypes: body["jobTypes[]"],
-      jobSites: body["jobSites[]"],
-      sector: body.sector,
-      experienceLevel: body.experienceLevel,
-      educationLevel: body.educationLevel,
-      genderPreference: body.genderPreference
-    });
-
-    console.log('Parsed job preferences:', {
-      sector: rawData.sector,
-      jobTypes: rawData.jobTypes,
-      jobSites: rawData.jobSites,
-      experienceLevel: rawData.experienceLevel,
-      educationLevel: rawData.educationLevel,
-      genderPreference: rawData.genderPreference,
-    });
-
     await saveProfileData(userId, profileData);
     await upsertJobPreferences(userId, parsed.data.jobPreferences);
 
-    const updatedUser = await db.select().from(users).where(eq(users.id, userId)).get();
-    const profile = await fetchUserProfile(userId);
+    const updatedProfile = await fetchUserProfile(userId);
 
     return c.html(
       <ProfileForm
-        user={updatedUser ? {
-          fullName: updatedUser.fullName,
-          email: updatedUser.email,
-          phone: updatedUser.phone ?? undefined,
-          location: updatedUser.location ?? undefined,
-          telegramUsername: updatedUser.telegramUsername ?? undefined,
-        } : undefined}
-        {...profile}
+        data={updatedProfile}
         errors={{ _global: ["Profile saved successfully!"] }}
       />,
     );
   } catch (error) {
     console.error("Database operation failed:", error);
+    const existingUser = await db.select().from(users).limit(1).get();
+    const profile = existingUser ? await fetchUserProfile(existingUser.id) : null;
     return c.html(
       <ProfileForm
-        user={rawData as unknown as UserSchemaType}
-        jobPreferences={rawData as unknown as JobFilterPreferencesSchemaType}
+        data={profile || undefined}
         errors={{
           _global: [
             "Failed to save profile. Please try again.",

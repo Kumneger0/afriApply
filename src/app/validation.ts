@@ -20,6 +20,7 @@ export const userSchema = z.object({
   location: z.string().optional().or(z.literal("")),
   telegramUsername: z.string().optional().or(z.literal("")),
   professionalSummary: z.string().optional().or(z.literal("")),
+  portfolioLinks: stringOrArray.optional().default([]).transform(arr => arr.filter(Boolean)),
 });
 
 export const jobFilterPreferencesSchema = z.object({
