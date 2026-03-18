@@ -15,6 +15,7 @@ import {
   type ApplicationFormData,
 } from "./src/browser/formFiller";
 import { scrapeAllJobs, type JobListing } from "./src/lib/jobParser";
+import { scheduler } from "./src/scheduler";
 
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -22,10 +23,7 @@ import app from "./src/app/index";
 import { db } from "./src/db/index.js";
 import { appliedJobs, scrapingState, users } from "./src/db/schema";
 import { getScrappingState, getUserProfile } from "./src/lib/utils.js";
-import {
-  handleWebhook,
-  sendNotification
-} from "./src/telegram/bot.js";
+import { handleWebhook, sendNotification } from "./src/telegram/bot.js";
 
 interface ScrapingConfig {
   email: string;
@@ -371,6 +369,19 @@ mainApp.route("/", app);
 const port = parseInt(process.env.PORT || "3000");
 console.log(`Server is running on port ${port}`);
 console.log(`Access the setup page at http://localhost:${port}/setup`);
+
+const jobSearchInterval = process.env.JOB_SEARCH_SCHEDULE || "2h";
+
+try {
+  scheduler.addJob("job-search", jobSearchInterval, async () => {
+    console.log("Starting scheduled job search...");
+    await searchForJobs();
+    console.log("Scheduled job search completed");
+  });
+  console.log("✅ Job scheduler initialized successfully");
+} catch (error) {
+  console.error("Failed to initialize job scheduler:", error);
+}
 
 Bun.serve({
   fetch: app.fetch,
