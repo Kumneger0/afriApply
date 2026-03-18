@@ -128,32 +128,24 @@ curl http://localhost:3000/apply
 **Automated scheduling:**
 Set up a cron job or use a task scheduler to periodically trigger the job search.
 
-## 🐳 Docker Deployment
+## 🚀 Deployment
 
-For production deployment, you can use Docker:
+### Traditional Server/VPS
+Built-in scheduler runs automatically based on `JOB_SEARCH_SCHEDULE` environment variable.
 
-**Option 1: Use pre-built image from Docker Hub**
+### Serverless Platforms
+Set `JOB_SEARCH_SCHEDULE=disabled` and use your own cron job to hit the `/apply` endpoint.
+
+### Docker
 ```bash
-# Pull and run the pre-built image
 docker run -p 3000:3000 --env-file .env kumneger0/afriapply:latest
-
 ```
 
-**Option 2: Build your own image**
-```bash
-# Build the Docker image locally
-docker build -t afriapply .
-
-# Run with environment file
-docker run -p 3000:3000 --env-file .env afriapply
-```
-
-## 🚀 Self-Hosting Requirements
-
-Since AfriApply is self-hosted, you'll need:
-
-- A server or VPS with sufficient resources
-- SSL certificate (recommended for production)
+### Scheduling Configuration
+```env
+JOB_SEARCH_SCHEDULE=2h    # Every 2 hours (30m, 1h, 6h, 1d, etc.)
+JOB_SEARCH_SCHEDULE=disabled  # For serverless
+```- SSL certificate (recommended for production)
 - Cron job or task scheduler for automated job searches
 
 ## 🤖 AI Integration

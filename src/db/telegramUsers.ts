@@ -2,10 +2,15 @@ import { db } from "./index";
 import { users } from "./schema";
 import { eq, isNotNull } from "drizzle-orm";
 
-export async function updateTelegramChatId(chatId: string): Promise<boolean> {
+export async function updateTelegramChatId(chatId: string, verificationId: string): Promise<boolean> {
   try {
-    await db.update(users).set({ telegramChatId: chatId });
-    return true;
+    const result = await db
+      .update(users)
+      .set({ telegramChatId: chatId })
+      .where(eq(users.verificationId, verificationId))
+      .run();
+    
+    return result.rowsAffected > 0;
   } catch (err) {
     console.error(err);
     return false;

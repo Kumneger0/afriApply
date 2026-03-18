@@ -12,6 +12,7 @@ import {
   skills,
   users,
 } from "../db/schema";
+import { generateVerificationId } from "../lib/verification";
 import { ProfileForm } from "./profile-form";
 import {
   ProfileSetupFormSchema,
@@ -358,7 +359,10 @@ app.post("/setup", async (c) => {
       : (
           await db
             .insert(users)
-            .values(parsed.data.user)
+            .values({
+              ...parsed.data.user,
+              verificationId: generateVerificationId(),
+            })
             .returning({ id: users.id })
             .get()
         ).id;
