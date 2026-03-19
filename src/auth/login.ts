@@ -18,7 +18,6 @@ export interface AuthenticatedSession {
 
 async function createBrowser(options: LoginOptions = {}): Promise<Browser> {
   return await puppeteer.launch({
-    executablePath: "/usr/bin/google-chrome",
     headless: !!options.headless,
     args: [
       "--no-sandbox",

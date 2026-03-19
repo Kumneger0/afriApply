@@ -108,6 +108,22 @@ app.get("/setup", async (c) => {
   return c.html(<ProfileForm data={profile} />);
 });
 
+app.post("/setup/generate-verification", async (c) => {
+  const existingUser = await db.select().from(users).limit(1).get();
+
+  if (!existingUser) {
+    return c.redirect("/setup");
+  }
+
+  await db
+    .update(users)
+    .set({ verificationId: generateVerificationId() })
+    .where(eq(users.id, existingUser.id))
+    .run();
+
+  return c.redirect("/setup");
+});
+
 const parseFormData = (
   body: Record<string, string | File | (string | File)[]>,
 ) => {
