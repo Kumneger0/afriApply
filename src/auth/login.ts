@@ -90,6 +90,11 @@ export async function loginToAfriwork(
   const browser = await createBrowser(options);
   const page = await setupPage(browser);
 
+  const loggedIn = await isLoggedIn(page);
+  if (loggedIn) {
+    return { browser, page };
+  }
+
   await page.evaluateOnNewDocument(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
@@ -131,7 +136,7 @@ export async function isLoggedIn(page: Page): Promise<boolean> {
   try {
     await page.goto("https://afriworket.com/profiles", {
       waitUntil: "networkidle2",
-      timeout: 100000,
+      timeout: 10000,
     });
 
     const currentUrl = page.url();
