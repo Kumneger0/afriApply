@@ -1,6 +1,6 @@
 # AfriApply - Automated Job Application Assistant
 
-AfriApply is an intelligent job application automation tool that helps job seekers on Afriwork by automatically finding suitable positions, generating personalized cover letters using AI, and submitting applications on their behalf. The system includes Telegram notifications to keep users updated on their job search progress.
+AfriApply is an intelligent job application automation tool that helps job seekers on [Afriwork](https://afriworket.com) by automatically finding suitable positions, generating personalized cover letters using AI, and submitting applications on their behalf. The system includes Telegram notifications to keep users updated on their job search progress.
 
 **⚠️ Self-Hosted Only**: AfriApply is a self-hosted solution. There is no hosted version available - you must run it on your own infrastructure. This ensures your personal data and credentials remain under your control.
 
