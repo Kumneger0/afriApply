@@ -60,6 +60,10 @@ AfriApply is an intelligent job application automation tool that helps job seeke
    AFRIWORK_PASSWORD=your-password
    AFRIWORK_BASE_URL=https://afriworket.com/
 
+   # Database Configuration
+   DATABASE_URL=your-database-url
+   DATABASE_AUTH_TOKEN=your-database-auth-token
+
    # AI Configuration (choose one)
    OPENAI_API_KEY=your-openai-key
    # OR
@@ -76,6 +80,7 @@ AfriApply is an intelligent job application automation tool that helps job seeke
    # Server Configuration
    PORT=3000
    HEADLESS=true
+   JOB_SEARCH_SCHEDULE=2h
    ```
 
 4. **Set up the database**
