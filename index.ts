@@ -84,8 +84,9 @@ async function applyToSuitableJobs(
       appliedAt: new Date().toISOString(),
     };
 
+    const jobUrl = new URL(`/jobs/${job.jobId}`, baseUrl).href;
+
     try {
-      const jobUrl = `${baseUrl}/jobs/${job.jobId}`;
       await session.page.goto(jobUrl, {
         waitUntil: "networkidle2",
         timeout: 30000,
@@ -148,7 +149,7 @@ async function searchForJobs() {
     const currentUrl = session.page.url();
 
     if (!currentUrl.includes("/jobs")) {
-      await session.page.goto(`${config.baseUrl}/jobs`);
+      await session.page.goto(new URL("/jobs", config.baseUrl).href);
     }
 
     const result = await scrapeAllJobs(
