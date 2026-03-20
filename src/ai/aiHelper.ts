@@ -60,7 +60,9 @@ function getModel() {
   }
 }
 
-function createSystemPrompt(userProfile: Awaited<ReturnType<typeof getUserProfile>>,): string {
+function createSystemPrompt(
+  userProfile: Awaited<ReturnType<typeof getUserProfile>>,
+): string {
   return `You are a personal assistant for ${userProfile.fullName}. They are extremely busy with personal and work commitments, so they need your help with job applications.
 
 IMPORTANT: Do NOT auto-generate cover letters for every job. You need to be selective and strategic.
