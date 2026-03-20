@@ -78,7 +78,7 @@ export async function submitJobApplication(
 
     if (submitButton && submitButton.asElement()) {
       console.log('applied', submitButton.toString())
-      // await submitButton.asElement()?.click();
+       await submitButton.asElement()?.click();
     } else {
       throw new Error("Submit button not found");
     }
