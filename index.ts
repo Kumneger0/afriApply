@@ -337,9 +337,9 @@ async function searchForJobs() {
     } else {
       await sendNotification(
         "**Job Search Update**\n\n" +
-          "No new jobs found since the last check.\n\n" +
-          "You're all caught up! The system will continue monitoring for new job postings that match your profile.\n\n" +
-          "Next check will happen automatically.",
+        "No new jobs found since the last check.\n\n" +
+        "You're all caught up! The system will continue monitoring for new job postings that match your profile.\n\n" +
+        "Next check will happen automatically.",
       );
     }
   } catch (error) {
@@ -373,15 +373,17 @@ console.log(`Access the setup page at http://localhost:${port}/setup`);
 
 const jobSearchInterval = process.env.JOB_SEARCH_SCHEDULE || "2h";
 
-try {
-  scheduler.addJob("job-search", jobSearchInterval, async () => {
-    console.log("Starting scheduled job search...");
-    await searchForJobs();
-    console.log("Scheduled job search completed");
-  });
-  console.log("✅ Job scheduler initialized successfully");
-} catch (error) {
-  console.error("Failed to initialize job scheduler:", error);
+if (jobSearchInterval !== "disabled") {
+  try {
+    scheduler.addJob("job-search", jobSearchInterval, async () => {
+      console.log("Starting scheduled job search...");
+      await searchForJobs();
+      console.log("Scheduled job search completed");
+    });
+    console.log("✅ Job scheduler initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize job scheduler:", error);
+  }
 }
 
 Bun.serve({
